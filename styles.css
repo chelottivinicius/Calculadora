@@ -14,14 +14,14 @@
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
-  margin:0; font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:24px;
+  margin:0; font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background: linear-gradient(135deg, rgba(251, 255, 0, 0.432), rgba(255, 0, 0, 0.699)); display:flex; align-items:center; justify-content:center; padding:24px;
 }
 .page{width:100%; max-width:460px}
 .calculator{
   background:var(--card); border-radius:36px; padding:20px; box-shadow:var(--shadow);
 }
 .display{
-  background:linear-gradient(180deg,#1f2937,#111827); color:var(--text-display); font-size:48px; text-align:right; padding:28px 18px; border-radius:18px; margin-bottom:16px; min-height:72px; display:flex; align-items:center; justify-content:flex-end; font-weight:600; overflow:hidden; white-space:nowrap;
+  background:linear-gradient(180deg,#1f2937,#333a49); color:var(--text-display); font-size:48px; text-align:right; padding:28px 18px; border-radius:18px; margin-bottom:16px; min-height:72px; display:flex; align-items:center; justify-content:flex-end; font-weight:600; overflow:hidden; white-space:nowrap;
 }
 .keys{display:grid; grid-template-columns:repeat(4,1fr); gap:12px}
 .btn{background:var(--btn-num); border:0; padding:18px; font-size:20px; border-radius:14px; box-shadow:0 4px 10px rgba(16,24,40,0.06); cursor:pointer; transition:transform .06s ease, box-shadow .06s ease; min-width:56px; min-height:56px}
@@ -29,7 +29,7 @@ body{
 .btn:focus-visible{outline:3px solid rgba(37,99,235,0.9); outline-offset:3px; box-shadow:0 0 0 4px rgba(37,99,235,0.06)}
 .btn-fn{background:var(--btn-fn)}
 .btn-op{background:var(--btn-op); color:var(--btn-op-text)}
-.btn-zero{grid-column:span 2; text-align:left; padding-left:28px}
+.btn-zero{grid-column:span 1; text-align:center; padding-left:28px}
 .btn-equals{background:var(--btn-op); color:var(--btn-op-text); grid-column:span 1}
 
 /* Responsividade */

@@ -2,6 +2,7 @@
 
 Resumo do problema
 - Criar uma calculadora simples para um site, com aparência inspirada na calculadora do iPhone, moderna e responsiva para desktop e mobile.
+(Realizado apenas para estudo de testes de Vibe Coding usando o Copilot Github CLI - Plan Mode - GPT 5-mini)
 
 Decisões iniciais
 - Stack: Vanilla HTML / CSS / JavaScript (sem dependências).

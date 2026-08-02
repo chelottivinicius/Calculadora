@@ -1,79 +1,125 @@
-// Lógica básica da calculadora (Vanilla JS)
+// Calculadora (suporte a parênteses especial): primeiro pressione insere '(', depois sempre ')'
 const display = document.getElementById('display');
 const keys = document.querySelector('.keys');
 
 const calculator = {
-  displayValue: '0',
-  firstOperand: null,
-  operator: null,
-  waitingForSecondOperand: false,
+  expression: '0',
+  parenActivated: false // false = '(' ainda não inserido pelo botão especial; true = inserir sempre ')'
 };
 
 function updateDisplay() {
-  display.textContent = calculator.displayValue;
+  display.textContent = calculator.expression;
+}
+
+function replaceInitialZero(token) {
+  return calculator.expression === '0' ? token : calculator.expression + token;
 }
 
 function inputDigit(digit) {
-  const { displayValue, waitingForSecondOperand } = calculator;
-  if (waitingForSecondOperand) {
-    calculator.displayValue = digit;
-    calculator.waitingForSecondOperand = false;
-  } else {
-    calculator.displayValue = displayValue === '0' ? digit : displayValue + digit;
-  }
+  calculator.expression = replaceInitialZero(digit);
 }
 
 function inputDecimal() {
-  if (calculator.waitingForSecondOperand) {
-    calculator.displayValue = '0.';
-    calculator.waitingForSecondOperand = false;
-    return;
-  }
-  if (!calculator.displayValue.includes('.')) {
-    calculator.displayValue += '.';
+  const m = calculator.expression.match(/(\d+\.?\d*)$/);
+  if (m) {
+    if (!m[0].includes('.')) calculator.expression += '.';
+  } else {
+    calculator.expression = replaceInitialZero('0.');
   }
 }
 
-function handleOperator(nextOperator) {
-  const { firstOperand, displayValue, operator } = calculator;
-  const inputValue = parseFloat(displayValue);
-  if (operator && calculator.waitingForSecondOperand) {
-    calculator.operator = nextOperator;
-    return;
+function inputOperator(op) {
+  if (/[-+*/]$/.test(calculator.expression)) {
+    calculator.expression = calculator.expression.slice(0, -1) + op;
+  } else {
+    calculator.expression = replaceInitialZero(op);
   }
-  if (firstOperand == null && !isNaN(inputValue)) {
-    calculator.firstOperand = inputValue;
-  } else if (operator) {
-    const result = performCalculation[operator](firstOperand, inputValue);
-    calculator.displayValue = String(result);
-    calculator.firstOperand = result;
-  }
-  calculator.waitingForSecondOperand = true;
-  calculator.operator = nextOperator;
 }
 
-const performCalculation = {
-  add: (a,b) => a + b,
-  subtract: (a,b) => a - b,
-  multiply: (a,b) => a * b,
-  divide: (a,b) => (b === 0 ? 'Error' : a / b),
-};
-
-function resetCalculator() {
-  calculator.displayValue = '0';
-  calculator.firstOperand = null;
-  calculator.operator = null;
-  calculator.waitingForSecondOperand = false;
+function handleParenButton() {
+  if (!calculator.parenActivated) {
+    // primeira vez: insere '('
+    calculator.expression = replaceInitialZero('(');
+    calculator.parenActivated = true;
+  } else {
+    // depois: sempre insere ')'
+    calculator.expression += ')';
+  }
 }
 
-function handlePercent() {
-  const value = parseFloat(calculator.displayValue);
-  calculator.displayValue = String(value / 100);
+function inputParen(paren) {
+  // comportamento normal para teclado: respeitar parênteses
+  if (paren === '(') calculator.expression = replaceInitialZero('(');
+  else {
+    const open = (calculator.expression.match(/\(/g) || []).length;
+    const close = (calculator.expression.match(/\)/g) || []).length;
+    if (open > close) calculator.expression += ')';
+  }
+}
+
+function clearAll() {
+  calculator.expression = '0';
+  calculator.parenActivated = false;
+}
+
+function backspace() {
+  if (calculator.expression.length <= 1) {
+    calculator.expression = '0';
+    calculator.parenActivated = false;
+  } else {
+    const removed = calculator.expression.slice(-1);
+    calculator.expression = calculator.expression.slice(0, -1);
+    if (removed === '(') calculator.parenActivated = false;
+  }
 }
 
 function toggleSign() {
-  const value = parseFloat(calculator.displayValue);
-  calculator.displayValue = String(value * -1);
+  const re = /(\d+\.?\d*)$/;
+  const m = calculator.expression.match(re);
+  if (m) {
+    const num = m[0];
+    const start = m.index;
+    const toggled = String(parseFloat(num) * -1);
+    calculator.expression = calculator.expression.slice(0, start) + toggled;
+  } else {
+    if (calculator.expression === '0') return;
+    calculator.expression = '(-1)*(' + calculator.expression + ')';
+  }
+}
+
+function applyPercent() {
+  const re = /(\d+\.?\d*)%$/;
+  const m = calculator.expression.match(re);
+  if (m) {
+    const num = m[1];
+    const start = m.index;
+    calculator.expression = calculator.expression.slice(0, start) + '(' + num + '/100)';
+  } else {
+    calculator.expression += '%';
+  }
+}
+
+function safeEvaluateExpression(expr) {
+  try {
+    let sanitized = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-');
+    sanitized = sanitized.replace(/(\d+\.?\d*)%/g, '($1/100)');
+    const open = (sanitized.match(/\(/g) || []).length;
+    const close = (sanitized.match(/\)/g) || []).length;
+    if (open > close) sanitized += ')'.repeat(open - close);
+    if (/[^0-9+\-*/().\s]/.test(sanitized)) throw new Error('Invalid characters');
+    const result = Function('return ' + sanitized)();
+    if (result === Infinity || result === -Infinity || Number.isNaN(result)) throw new Error('Math error');
+    return String(result);
+  } catch (err) {
+    return 'Error';
+  }
+}
+
+function calculateResult() {
+  const res = safeEvaluateExpression(calculator.expression);
+  calculator.expression = res;
+  // Após cálculo, redefinir estado do botão de parênteses
+  calculator.parenActivated = false;
 }
 
 keys.addEventListener('click', (e) => {
@@ -82,8 +128,13 @@ keys.addEventListener('click', (e) => {
   const digit = target.dataset.digit;
   const action = target.dataset.action;
 
+  // Special parentheses button uses data-digit="()" in the provided HTML
   if (digit) {
-    inputDigit(digit);
+    if (digit === '()') {
+      handleParenButton();
+    } else {
+      inputDigit(digit);
+    }
     updateDisplay();
     return;
   }
@@ -91,21 +142,18 @@ keys.addEventListener('click', (e) => {
   if (action) {
     switch(action) {
       case 'decimal': inputDecimal(); break;
-      case 'clear': resetCalculator(); break;
-      case 'percent': handlePercent(); break;
+      case 'clear': clearAll(); break;
+      case 'backspace': backspace(); break;
+      case 'percent': applyPercent(); break;
       case 'plusminus': toggleSign(); break;
-      case 'equals':
-        if (calculator.operator && !calculator.waitingForSecondOperand) {
-          handleOperator(null);
-          calculator.operator = null;
-          calculator.waitingForSecondOperand = false;
-        }
-        break;
-      default:
-        // operators: add, subtract, multiply, divide
-        if (['add','subtract','multiply','divide'].includes(action)) {
-          handleOperator(action);
-        }
+      case 'equals': calculateResult(); break;
+      case 'paren-open': inputParen('('); break;
+      case 'paren-close': inputParen(')'); break;
+      case 'add': inputOperator('+'); break;
+      case 'subtract': inputOperator('-'); break;
+      case 'multiply': inputOperator('*'); break;
+      case 'divide': inputOperator('/'); break;
+      default: break;
     }
     updateDisplay();
   }
@@ -113,29 +161,29 @@ keys.addEventListener('click', (e) => {
 
 // Keyboard support
 window.addEventListener('keydown', (e) => {
-  if ((e.key >= '0' && e.key <= '9') || e.key === '.') {
-    if (e.key === '.') inputDecimal(); else inputDigit(e.key);
+  if (e.key >= '0' && e.key <= '9') {
+    inputDigit(e.key);
     updateDisplay();
     e.preventDefault();
     return;
   }
+  if (e.key === '.') { inputDecimal(); updateDisplay(); e.preventDefault(); return; }
+
   switch(e.key) {
     case 'Enter':
     case '=':
-      if (calculator.operator && !calculator.waitingForSecondOperand) {
-        handleOperator(null);
-        calculator.operator = null;
-        calculator.waitingForSecondOperand = false;
-        updateDisplay();
-      }
-      e.preventDefault();
-      break;
-    case '+': handleOperator('add'); updateDisplay(); break;
-    case '-': handleOperator('subtract'); updateDisplay(); break;
-    case '*': handleOperator('multiply'); updateDisplay(); break;
-    case '/': handleOperator('divide'); updateDisplay(); break;
-    case '%': handlePercent(); updateDisplay(); break;
-    case 'Backspace': resetCalculator(); updateDisplay(); break;
+      calculateResult(); updateDisplay(); e.preventDefault(); break;
+    case '+': inputOperator('+'); updateDisplay(); break;
+    case '-': inputOperator('-'); updateDisplay(); break;
+    case '*': inputOperator('*'); updateDisplay(); break;
+    case '/': inputOperator('/'); updateDisplay(); break;
+    case '%': applyPercent(); updateDisplay(); break;
+    case 'Backspace': backspace(); updateDisplay(); break;
+    case '(':
+      inputParen('('); updateDisplay(); break;
+    case ')':
+      inputParen(')'); updateDisplay(); break;
+    default: break;
   }
 });
 

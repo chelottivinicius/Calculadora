@@ -37,13 +37,13 @@ function inputOperator(op) {
 }
 
 function handleParenButton() {
+  // Alterna entre '(' e ')' a cada pressão
   if (!calculator.parenActivated) {
-    // primeira vez: insere '('
     calculator.expression = replaceInitialZero('(');
     calculator.parenActivated = true;
   } else {
-    // depois: sempre insere ')'
     calculator.expression += ')';
+    calculator.parenActivated = false;
   }
 }
 
@@ -67,9 +67,11 @@ function backspace() {
     calculator.expression = '0';
     calculator.parenActivated = false;
   } else {
-    const removed = calculator.expression.slice(-1);
     calculator.expression = calculator.expression.slice(0, -1);
-    if (removed === '(') calculator.parenActivated = false;
+    // Recalcula estado do botão: se houver mais '(' do que ')', o próximo deve ser ')'
+    const open = (calculator.expression.match(/\(/g) || []).length;
+    const close = (calculator.expression.match(/\)/g) || []).length;
+    calculator.parenActivated = open > close;
   }
 }
 
